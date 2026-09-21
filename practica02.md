@@ -37,3 +37,21 @@ Con base en la documentación del código fuente de la estructura `struct trapfr
 * Documentación técnica del código fuente de xv6-riscv: [Build an OS - Traps and Interrupts: Trapframe Data Structure](https://xiayingp.gitbook.io/build_a_os/traps-and-interrupts/untitled-2)
 ![Captura grep trapframe](imgs/tapframe.png)
 ![Captura grep struct_trapframe](imgs/estructura.png)
+
+## 3. Preguntas de reflexión
+
+### 1. Comparando las dos llamadas al sistema elegidas: ¿la implementación de cada una vive en `sysproc.c` o en `sysfile.c`? ¿A qué criterio responde esa separación de archivos dentro del código fuente de xv6?
+
+La llamada `getpid` se implementa en `kernel/sysproc.c` bajo la función `sys_getpid`, mientras que `read` vive en `kernel/sysfile.c` bajo la función `sys_read`. Esta separación responde a un criterio de organización modular en el código de xv6. Por un lado, `sysproc.c` agrupa las llamadas del sistema dedicadas a la gestión y control de procesos (como el PID, creación o sincronización). Por otro lado, `sysfile.c` contiene las funciones encargadas del manejo del sistema de archivos, descriptores y operaciones de entrada/salida.
+
+---
+
+### 2. ¿Por qué es necesario que el número de la llamada al sistema se transmita mediante un registro del procesador (`a7`), y no, por ejemplo, mediante una variable compartida en memoria?
+
+Transmitir el número de la llamada a través del registro `a7` es necesario principalmente por seguridad y aislamiento de memoria. El programa de usuario y el kernel poseen espacios de direcciones de memoria totalmente distintos e independientes, por lo que el usuario no puede escribir directamente en la memoria del kernel. Además, utilizar registros físicos de la CPU mediante la instrucción `ecall` es una convención de la arquitectura RISC-V (ABI) que resulta mucho más eficiente, evitando el sobrecosto de gestionar memoria compartida durante un cambio de contexto.
+
+---
+
+### 3. (Investigación, opcional) Si dos procesos distintos realizaran una llamada al sistema en un intervalo de tiempo muy cercano, ¿cómo evita el kernel que se mezclen los registros o el estado guardado de cada uno?
+
+El kernel evita la mezcla de estados manteniendo aislamiento individual para cada proceso. Cada proceso cuenta con su propia estructura `p->trapframe` donde se respaldan únicamente sus registros cuando ocurre una trampa. Asimismo, cada proceso dispone de su propia pila en el espacio del kernel (`p->kstack`). De este modo, aunque la ejecución de dos llamadas coincida en el tiempo, las operaciones de C dentro del kernel y el guardado de contexto suceden en regiones de memoria privadas de cada proceso.
